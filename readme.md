@@ -37,16 +37,6 @@ npx things-mcp
 npm install -g things-mcp
 ```
 
-### From Source
-
-```bash
-git clone https://github.com/your-username/things-mcp.git
-cd things-mcp
-npm install
-npm run build
-npm link
-```
-
 ## Configuration
 
 ### Claude Desktop
@@ -62,7 +52,7 @@ Add the server to your Claude Desktop configuration file:
   "mcpServers": {
     "things": {
       "command": "npx",
-      "args": ["things-mcp"]
+      "args": ["-y", "things-mcp"]
     }
   }
 }
@@ -79,10 +69,6 @@ Add the server to your Claude Desktop configuration file:
   }
 }
 ```
-
-### Other MCP Clients
-
-For other MCP clients, configure them to run `npx things-mcp` as an MCP server.
 
 ## Usage
 
@@ -307,30 +293,13 @@ The server includes comprehensive error handling:
 - Check the configuration file syntax
 - Look for errors in client logs
 
-## Development
-
-```bash
-# Install dependencies
-npm install
-
-# Build TypeScript
-npm run build
-
-# Run in development mode
-npm run dev
-
-# Run tests
-npm test
-```
-
 ## Contributing
 
 Contributions are welcome! Please:
 
 1. Fork the repository
 2. Create a feature branch
-3. Add tests for new functionality
-4. Submit a pull request
+3. Submit a pull request
 
 ## License
 

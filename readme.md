@@ -1,4 +1,5 @@
 # Things MCP Server
+[![Trust Score](https://archestra.ai/mcp-catalog/api/badge/quality/jimfilippou/things-mcp)](https://archestra.ai/mcp-catalog/jimfilippou__things-mcp)
 
 A Model Context Protocol (MCP) server that provides seamless integration with the [Things](https://culturedcode.com/things/) productivity app. This server enables AI assistants to create, update, and manage your todos and projects in Things using its comprehensive URL scheme.
 

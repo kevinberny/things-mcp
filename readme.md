@@ -391,6 +391,10 @@ Contributions are welcome! Please:
 2. Create a feature branch
 3. Submit a pull request
 
+## Credits
+
+This project is based on the original [things-mcp](https://github.com/jimfilippou/things-mcp) by [Dimitrios Filippou](https://github.com/jimfilippou). This fork includes additional security improvements, comprehensive testing, linting, and CI/CD enhancements.
+
 ## License
 
 MIT License - see LICENSE file for details.

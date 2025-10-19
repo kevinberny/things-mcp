@@ -963,7 +963,7 @@ Configuration:
   Set THINGS_AUTH_TOKEN environment variable to avoid passing auth-token
   parameter for update operations.
 
-Documentation: https://github.com/jimfilippou/things-mcp
+Documentation: https://github.com/kevinberny/things-mcp
   `.trim()
   );
   process.exit(0);

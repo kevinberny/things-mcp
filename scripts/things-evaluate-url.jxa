@@ -1,0 +1,392 @@
+#!/usr/bin/osascript -l JavaScript
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+function getThingsApplication() {
+  try {
+    return Application("Things3");
+  } catch (primaryErr) {
+    try {
+      return Application("Things");
+    } catch (secondaryErr) {
+      throw new Error("things_app_not_found");
+    }
+  }
+}
+
+function parseThingsURL(urlString) {
+  // Parse things:///show?id=5cTKEQAZ8PiLD6KJHYooaH
+  // or things://show?id=5cTKEQAZ8PiLD6KJHYooaH
+  
+  try {
+    const url = new URL(urlString);
+    const id = url.searchParams.get("id");
+    
+    if (!id) {
+      throw new Error("No id parameter found in URL");
+    }
+    
+    return id;
+  } catch (err) {
+    // Fallback: try regex parsing
+    const match = urlString.match(/[?&]id=([^&]+)/);
+    if (match && match[1]) {
+      return match[1];
+    }
+    throw new Error("Could not parse Things URL: " + urlString);
+  }
+}
+
+function callMaybe(obj, prop) {
+  if (!obj || typeof obj[prop] !== "function") {
+    return null;
+  }
+
+  try {
+    return obj[prop]();
+  } catch (err) {
+    return null;
+  }
+}
+
+function normalizeSingle(value) {
+  if (!value) {
+    return null;
+  }
+
+  if (Array.isArray(value)) {
+    return value.length > 0 ? value[0] : null;
+  }
+
+  if (typeof value.length === "number" && value.length > 0) {
+    return value[0];
+  }
+
+  if (typeof value.length === "function") {
+    const count = value.length();
+    if (count > 0) {
+      return value[0];
+    }
+    return null;
+  }
+
+  return value;
+}
+
+function toArray(value) {
+  if (!value) {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  if (typeof value.length === "number") {
+    const result = [];
+    for (let i = 0; i < value.length; i += 1) {
+      result.push(value[i]);
+    }
+    return result;
+  }
+
+  if (typeof value.length === "function") {
+    const count = value.length();
+    const result = [];
+    for (let i = 0; i < count; i += 1) {
+      result.push(value[i]);
+    }
+    return result;
+  }
+
+  return [];
+}
+
+function toStringArray(value) {
+  return toArray(value).map((entry) => safeString(entry));
+}
+
+function isoDate(value) {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    let date = value;
+    if (!(value instanceof Date)) {
+      date = new Date(value);
+    }
+    
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+    return date.toISOString();
+  } catch (err) {
+    return null;
+  }
+}
+
+function valueOrEmpty(value) {
+  if (value === undefined || value === null) {
+    return "";
+  }
+  return String(value);
+}
+
+function safeStatus(item) {
+  if (!item || typeof item.status !== "function") {
+    return null;
+  }
+
+  try {
+    const status = item.status();
+    if (status === undefined || status === null) {
+      return null;
+    }
+    return String(status);
+  } catch (err) {
+    return null;
+  }
+}
+
+function safeString(value, fallback = "") {
+  if (value === undefined || value === null) {
+    return fallback;
+  }
+
+  try {
+    if (typeof value === "string") {
+      return value;
+    }
+    if (value && typeof value.toString === "function") {
+      return value.toString();
+    }
+    return String(value);
+  } catch (err) {
+    return fallback;
+  }
+}
+
+function cleanPayload(obj) {
+  const result = {};
+  Object.keys(obj).forEach((key) => {
+    const value = obj[key];
+    if (value !== undefined) {
+      result[key] = value;
+    }
+  });
+  return result;
+}
+
+// ============================================================================
+// RENDER FUNCTIONS
+// ============================================================================
+
+function renderRef(value) {
+  const reference = normalizeSingle(value);
+  if (!reference || typeof reference.id !== "function") {
+    return null;
+  }
+
+  let nameValue = "";
+  if (reference.name) {
+    nameValue = typeof reference.name === "function" 
+      ? safeString(reference.name())
+      : safeString(reference.name);
+  }
+
+  return cleanPayload({
+    id: safeString(reference.id()),
+    title: nameValue,
+  });
+}
+
+function renderChecklistItem(item) {
+  return cleanPayload({
+    id: safeString(item.id()),
+    title: safeString(item.name()),
+    status: safeStatus(item),
+  });
+}
+
+function renderTodo(item) {
+  const payload = cleanPayload({
+    type: "to-do",
+    id: safeString(item.id()),
+    title: safeString(item.name()),
+    status: safeStatus(item),
+    notes: valueOrEmpty(callMaybe(item, "notes")),
+    when: isoDate(callMaybe(item, "startDate")),
+    deadline: isoDate(callMaybe(item, "deadline")),
+    completed_at: isoDate(callMaybe(item, "completionDate")),
+    tags: toStringArray(callMaybe(item, "tagNames")),
+    project: renderRef(callMaybe(item, "project")),
+    area: renderRef(callMaybe(item, "area")),
+    checklist: toArray(callMaybe(item, "checklistItems")).map(renderChecklistItem),
+  });
+
+  return payload;
+}
+
+function renderHeading(item) {
+  const todos = toArray(callMaybe(item, "toDos"))
+    .map(renderTodoInHeading)
+    .filter(t => t.title.trim().length > 0); // Filter out empty todos
+
+  return cleanPayload({
+    id: safeString(item.id()),
+    title: safeString(item.name()),
+    status: safeStatus(item),
+    todos: todos,
+  });
+}
+
+function renderTodoInHeading(item) {
+  return cleanPayload({
+    id: safeString(item.id()),
+    title: safeString(item.name()),
+    status: safeStatus(item),
+    notes: valueOrEmpty(callMaybe(item, "notes")),
+    when: isoDate(callMaybe(item, "startDate")),
+    deadline: isoDate(callMaybe(item, "deadline")),
+    completed_at: isoDate(callMaybe(item, "completionDate")),
+    tags: toStringArray(callMaybe(item, "tagNames")),
+  });
+}
+
+function renderProject(item) {
+  // Get headings within the project
+  let headings = [];
+  try {
+    const headingsArray = toArray(callMaybe(item, "headings"));
+    headings = headingsArray.map(renderHeading).filter(h => h.todos.length > 0); // Only include non-empty headings
+  } catch (err) {
+    console.log("DEBUG: Error getting project headings:", err.message);
+  }
+
+  // Get todos within the project (not in any heading)
+  let todos = [];
+  try {
+    const todosArray = toArray(callMaybe(item, "toDos"));
+    todos = todosArray
+      .map(renderTodoInHeading)
+      .filter(t => t.title.trim().length > 0); // Filter out empty todos
+  } catch (err) {
+    console.log("DEBUG: Error getting project todos:", err.message);
+  }
+
+  const payload = cleanPayload({
+    type: "project",
+    id: safeString(item.id()),
+    title: safeString(item.name()),
+    status: safeStatus(item),
+    notes: valueOrEmpty(callMaybe(item, "notes")),
+    when: isoDate(callMaybe(item, "startDate")),
+    deadline: isoDate(callMaybe(item, "deadline")),
+    completed_at: isoDate(callMaybe(item, "completionDate")),
+    tags: toStringArray(callMaybe(item, "tagNames")),
+    area: renderRef(callMaybe(item, "area")),
+    headings: headings,
+    todos: todos,
+  });
+
+  return payload;
+}
+
+function renderArea(item) {
+  const payload = cleanPayload({
+    type: "area",
+    id: safeString(item.id()),
+    title: safeString(item.name()),
+  });
+
+  return payload;
+}
+
+function renderTag(item) {
+  const payload = cleanPayload({
+    type: "tag",
+    id: safeString(item.id()),
+    title: safeString(item.name()),
+  });
+
+  return payload;
+}
+
+// ============================================================================
+// MAIN FUNCTION - Handle both direct IDs and Things URLs
+// ============================================================================
+
+function run(argv) {
+  if (!argv || argv.length === 0) {
+    return JSON.stringify({ error: "missing_id_or_url" });
+  }
+
+  let thingID;
+  const input = String(argv[0]);
+
+  // Check if input is a Things URL
+  if (input.startsWith("things://")) {
+    try {
+      thingID = parseThingsURL(input);
+    } catch (err) {
+      return JSON.stringify({ error: "invalid_url", message: err.message });
+    }
+  } else {
+    // Assume it's a direct ID
+    thingID = input;
+  }
+
+  let Things;
+  
+  try {
+    Things = getThingsApplication();
+  } catch (err) {
+    console.log("ERROR: Failed to load Things application");
+    return JSON.stringify({ error: "things_app_not_found", id: thingID });
+  }
+
+  // Try to find in todos (most common)
+  try {
+    const todoMatch = Things.toDos.whose({ id: thingID })();
+    if (todoMatch.length > 0) {
+      return JSON.stringify(renderTodo(todoMatch[0]));
+    }
+  } catch (err) {
+    console.log("DEBUG: Error searching todos:", err.message);
+  }
+
+  // Try to find in projects
+  try {
+    const projectMatch = Things.projects.whose({ id: thingID })();
+    if (projectMatch.length > 0) {
+      return JSON.stringify(renderProject(projectMatch[0]));
+    }
+  } catch (err) {
+    console.log("DEBUG: Error searching projects:", err.message);
+  }
+
+  // Try to find in areas
+  try {
+    const areaMatch = Things.areas.whose({ id: thingID })();
+    if (areaMatch.length > 0) {
+      return JSON.stringify(renderArea(areaMatch[0]));
+    }
+  } catch (err) {
+    console.log("DEBUG: Error searching areas:", err.message);
+  }
+
+  // Try to find in tags
+  try {
+    const tagMatch = Things.tags.whose({ id: thingID })();
+    if (tagMatch.length > 0) {
+      return JSON.stringify(renderTag(tagMatch[0]));
+    }
+  } catch (err) {
+    console.log("DEBUG: Error searching tags:", err.message);
+  }
+
+  return JSON.stringify({ error: "not_found", id: thingID });
+}

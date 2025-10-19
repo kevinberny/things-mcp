@@ -133,4 +133,8 @@ build/Release
 
 # MCP specific
 .mcp/
-mcp-debug.log 
+mcp-debug.log
+
+# Temporary scripts and test files
+script.sh
+typescript 

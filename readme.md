@@ -138,12 +138,45 @@ Create a new project with full configuration:
 - **completed/canceled** - Project status
 - **reveal** - Navigate to created project
 
+### create-structured-project
+
+Build fully-structured projects (real headings, nested todos, checklists) in a single call:
+
+- **project** - Structured definition including headings and `to-do` entries
+- **auth-token** *(optional)* - Required if the payload performs update operations (omit when `THINGS_AUTH_TOKEN` env var is set)
+- **reveal** *(optional)* - Jump into the newly created project after creation
+
+Example payload:
+
+```json
+{
+  "title": "Whole Foods Shopping",
+  "items": [
+    {
+      "type": "heading",
+      "title": "Produce",
+      "items": [
+        { "type": "to-do", "title": "½ lb baby potatoes" },
+        { "type": "to-do", "title": "2 avocados", "when": "today" }
+      ]
+    },
+    {
+      "type": "heading",
+      "title": "Dairy, Eggs & Cheese",
+      "items": [
+        { "type": "to-do", "title": "12 large eggs" }
+      ]
+    }
+  ]
+}
+```
+
 ### update
 
 Modify existing todos:
 
 - **id** - Todo ID (required)
-- **auth-token** - Authorization token (required)
+- **auth-token** - Authorization token (omit if `THINGS_AUTH_TOKEN` env var is set)
 - **title** - New title
 - **notes/prepend-notes/append-notes** - Note modifications
 - **when** - Reschedule
@@ -158,6 +191,27 @@ Modify existing todos:
 
 Modify existing projects with similar options to update command.
 
+### restructure-project
+
+Rebuild the structure of an existing project—create/rename headings and re-home todos in one batch:
+
+- **project-id** - Project identifier from Share → Copy Link
+- **auth-token** - Required for batch updates (omit if `THINGS_AUTH_TOKEN` env var is set)
+- **layout** - Ordered blocks describing headings and unsectioned todos
+
+Example layout:
+
+```json
+[
+  { "type": "unsectioned", "items": ["ABC123"] },
+  {
+    "type": "heading",
+    "title": "Design",
+    "items": ["DEF456", "GHI789"]
+  }
+]
+```
+
 ### show
 
 Navigate to specific items or lists:
@@ -171,6 +225,15 @@ Navigate to specific items or lists:
 Search across all Things data:
 
 - **query** - Search terms
+
+### evaluate
+
+Inspect any Things item (to-do, project, heading, area, tag) and return its fields as structured JSON:
+
+- **id** - Things object identifier from Share → Copy Link
+- **url** - Full Things URL (e.g. `things:///show?id=<ID>`) — do not send both `id` and `url`
+
+Requires macOS automation permissions for Things. The server shells out to `scripts/things-evaluate-url.jxa`, so make sure that script is executable (`chmod +x`). The result comes back as `json` content you can feed into downstream tools.
 
 ### json
 
@@ -188,6 +251,32 @@ Some operations (updates) require an authorization token from Things:
 2. **iOS**: Settings → General → Things URLs
 
 Copy your unique token and use it with update operations.
+
+### Using THINGS_AUTH_TOKEN
+
+To avoid passing the token with every command, set `THINGS_AUTH_TOKEN` in your MCP server configuration or shell environment.
+
+**Claude Desktop example:**
+
+```json
+{
+  "mcpServers": {
+    "things": {
+      "command": "npx",
+      "args": ["-y", "things-mcp"],
+      "env": {
+        "THINGS_AUTH_TOKEN": "paste-your-token-here"
+      }
+    }
+  }
+}
+```
+
+Or export it before launching your client:
+
+```bash
+export THINGS_AUTH_TOKEN="paste-your-token-here"
+```
 
 ## Getting Item IDs
 
@@ -285,7 +374,7 @@ The server includes comprehensive error handling:
 ### Authorization Errors
 
 - Get your auth token from Things settings
-- Include auth-token parameter for update operations
+- Include auth-token parameter for update operations (or set `THINGS_AUTH_TOKEN`)
 - Ensure token is copied correctly without extra spaces
 
 ### Connection Issues

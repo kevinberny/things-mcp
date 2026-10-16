@@ -9,6 +9,7 @@ import { randomUUID } from "crypto";
 import path from "path";
 import { fileURLToPath } from "url";
 import { existsSync } from "fs";
+import { thingsQuery } from "./things-url.js";
 
 const execAsync = promisify(exec);
 
@@ -395,7 +396,7 @@ server.tool(
     if (params["creation-date"]) urlParams.set("creation-date", params["creation-date"]);
     if (params["completion-date"]) urlParams.set("completion-date", params["completion-date"]);
 
-    const url = `things:///add?${urlParams.toString()}`;
+    const url = `things:///add?${thingsQuery(urlParams)}`;
     await openThingsURL(url);
 
     const todoName = params.titles ? "todos" : `todo "${params.title || "untitled"}"`;
@@ -460,7 +461,7 @@ server.tool(
     if (params["creation-date"]) urlParams.set("creation-date", params["creation-date"]);
     if (params["completion-date"]) urlParams.set("completion-date", params["completion-date"]);
 
-    const url = `things:///add-project?${urlParams.toString()}`;
+    const url = `things:///add-project?${thingsQuery(urlParams)}`;
     await openThingsURL(url);
 
     return {
@@ -501,7 +502,7 @@ server.tool(
       urlParams.set("reveal", params.reveal.toString());
     }
 
-    const url = `things:///json?${urlParams.toString()}`;
+    const url = `things:///json?${thingsQuery(urlParams)}`;
     await openThingsURL(url);
 
     return {
@@ -585,7 +586,7 @@ server.tool(
     if (params["creation-date"]) urlParams.set("creation-date", params["creation-date"]);
     if (params["completion-date"]) urlParams.set("completion-date", params["completion-date"]);
 
-    const url = `things:///update?${urlParams.toString()}`;
+    const url = `things:///update?${thingsQuery(urlParams)}`;
     await openThingsURL(url);
 
     return {
@@ -650,7 +651,7 @@ server.tool(
     if (params["creation-date"]) urlParams.set("creation-date", params["creation-date"]);
     if (params["completion-date"]) urlParams.set("completion-date", params["completion-date"]);
 
-    const url = `things:///update-project?${urlParams.toString()}`;
+    const url = `things:///update-project?${thingsQuery(urlParams)}`;
     await openThingsURL(url);
 
     return {
@@ -700,7 +701,7 @@ server.tool(
     urlParams.set("auth-token", authToken);
     urlParams.set("data", JSON.stringify(operations));
 
-    const url = `things:///json?${urlParams.toString()}`;
+    const url = `things:///json?${thingsQuery(urlParams)}`;
     await openThingsURL(url);
 
     const resultTextLines = [`Project ${params["project-id"]} restructured successfully in Things`];
@@ -748,7 +749,7 @@ server.tool(
       urlParams.set("filter", params.filter.join(","));
     }
 
-    const url = `things:///show?${urlParams.toString()}`;
+    const url = `things:///show?${thingsQuery(urlParams)}`;
     await openThingsURL(url);
 
     const target = params.id || params.query || "Things";
@@ -782,7 +783,7 @@ server.tool(
     const urlParams = new URLSearchParams();
     if (params.query) urlParams.set("query", params.query);
 
-    const url = `things:///search?${urlParams.toString()}`;
+    const url = `things:///search?${thingsQuery(urlParams)}`;
     await openThingsURL(url);
 
     return {
@@ -926,7 +927,7 @@ server.tool(
       urlParams.set("reveal", params.reveal.toString());
     }
 
-    const url = `things:///json?${urlParams.toString()}`;
+    const url = `things:///json?${thingsQuery(urlParams)}`;
     await openThingsURL(url);
 
     return {
